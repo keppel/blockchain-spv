@@ -41,6 +41,7 @@ Creates an SPV `Blockchain` which stores and verifies block headers.
 `opts` can contain:
 - `start` - a header to be used as the starting point (e.g. the genesis or a checkpoint)
 - `store` *(optional)* an array where the verified chain of headers should be stored
+- `network` (default: 'mainnet') which Bitcoin network settings to use. can be 'mainnet', 'testnet', or 'regtest'
 - `indexed` *(default: false)* whether or not to index headers by their hash, enabling the `getByHash` method
 - `maxTarget` *(default: Bitcoin maxTarget)* a maximum difficulty target value as a 32-byte `Buffer`, should only be changed to make mining easier for writing tests
 

@@ -15,6 +15,22 @@ const maxTimeIncrease = 8 * 60 * 60 // 8 hours
 const maxTarget = expandTarget(0x1d00ffff)
 const maxReorgDepth = retargetInterval
 
+const networkDefaults = {
+  regtest: {
+    allowMinDifficultyBlocks: true,
+    noRetargeting: true
+  },
+  testnet: {
+    allowMinDifficultyBlocks: true,
+    noRetargeting: false
+  },
+  mainnet: {
+    allowMinDifficultyBlocks: false,
+    noRetargeting: false
+  }
+
+}
+
 // TODO: keep track of chain work so we can use most-work chain
 //       instead of longest chain. not a security flaw right now
 //       because we don't allow reorgs larger than the retarget
@@ -26,15 +42,25 @@ class Blockchain extends EventEmitter {
 
     this.store = opts.store || []
     this.indexed = opts.indexed
+    this.network = opts.network || 'mainnet'
+
+    if (!Object.keys(networkDefaults).includes(this.network)) {
+      throw new Error(`Invalid network option '${this.network}'
+      Valid options are 'regtest', 'mainnet', or 'testnet'`)
+    }
 
     // should only be changed in tests, when we want really easy mining
     this.maxTarget = opts.maxTarget || maxTarget
     this.maxTargetBn = new BN(this.maxTarget.toString('hex'), 'hex')
     this.maxTargetBits = compressTarget(this.maxTarget)
 
-    // should only be set for testnets/regtest
-    this.allowMinDifficultyBlocks = opts.allowMinDifficultyBlocks
-    this.noRetargeting = opts.noRetargeting
+    this.noRetargeting = typeof opts.noRetargeting === 'undefined'
+      ? networkDefaults[this.network].noRetargeting
+      : opts.noRetargeting
+
+    this.allowMinDifficultyBlocks = typeof opts.allowMinDifficultyBlocks === 'undefined'
+      ? networkDefaults[this.network].allowMinDifficultyBlocks
+      : opts.allowMinDifficultyBlocks
 
     // initialize with starting header if the store is empty
     if (this.store.length === 0) {
@@ -178,7 +204,7 @@ class Blockchain extends EventEmitter {
       prevEleven = prevEleven.map(({ timestamp }) => timestamp).sort()
       let medianTimestamp = prevEleven[5]
       // we use !> instead of <= to ensure we fail on non-number timestamp values
-      if (!(header.timestamp > medianTimestamp)) {
+      if (this.network !== 'regtest' && !(header.timestamp > medianTimestamp)) {
         throw Error('Timestamp is not greater than median of previous 11 timestamps')
       }
 
